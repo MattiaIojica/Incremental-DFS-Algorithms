@@ -1,0 +1,230 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Welcome to Overleaf --- just edit your LaTeX on the left,
+% and we'll compile it for you on the right. If you open the
+% 'Share' menu, you can invite other users to edit at the same
+% time. See www.overleaf.com/learn for more info. Enjoy!
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[12pt,a4paper]{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage{fontspec}
+ 
+\setmainfont{Times New Roman}  
+
+\usepackage{indentfirst}
+
+\usepackage[romanian]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{combelow}
+
+\usepackage{amsmath}
+\usepackage{hyperref}
+
+\usepackage{datetime}
+\newdateformat{monthyeardate}{\monthname[\THEMONTH] \THEYEAR}
+
+\useshorthands{'}
+\defineshorthand{'s}{\cb{s}}
+\defineshorthand{'t}{\cb{t}}
+\defineshorthand{'S}{\cb{S}}
+\defineshorthand{'T}{\cb{T}}
+
+
+\begin{document}
+
+ \title{\textbf{Incremental DFS algorithms: a theoretical and experimental study}}
+\author{Iojică Mattia}
+\date{\monthyeardate\today }
+
+\maketitle
+
+
+Surender Baswana, Ayush Goel, Shahbaz Khan. 
+\href{https://epubs.siam.org/doi/pdf/10.1137/1.9781611975031.4}{Incremental DFS algorithms: a theoretical and experimental study}. SODA '18
+
+\hfill
+
+\section{Preliminarii}
+
+    Pentru toate experimentele descrise, adaugăm grafului \textit{G} un nod \textit{s} conectat la toate nodurile sale. Algoritmii vor incepe mereu din nodul \textit{s}, iar la final, graful obținut va avea ca rădăcină nodul \textit{s}, iar fiecare subarbore înrădăcinat la orice copil al lui \textit{s} va fi o componentă conexă a lui \textit{G}.
+
+    Având graful \textit{G}, vom folosi următoarele notații:
+\begin{itemize}
+    \item \textit{T} este un arbore DFS a lui \textit{G}.
+    \item \textit{path(x, y)} este drumul de la \textit{x} la \textit{y} în \textit{T}.
+    \item \textit{T(x)} este subarborele cu rădăcina în \textit{x}.  
+    \item \textit{LCA(u, v)} este cel mai mic strămoș comun al lui \textit{u} și \textit{v} în \textit{T}.
+    \item De-a lungul lucrării ne vom întâlni cu 2 tipuri de grafuri aleatoare:
+    \begin{enumerate}
+        \item \textit{G(n, m)}: având $n$ noduri și $m$ muchii dintr-o permutare aleatoare a muchiilor din graf.
+         \item \textit{G(n, p)}: având $n$ noduri, iar fiecare muchie are probabilitatea $p$ să apară in graf.
+    \end{enumerate}
+\end{itemize}
+     
+    
+\section{Introducere}
+
+	Parcurgerea în adâncime (Depth First Search) este un algoritm folosit pentru a parcurge o structură de date de tip graf. Aceasta a jucat un rol estențial în proiectarea algoritmilor eficienti pentru cu grafuri cum ar fi: componente conexte, sortare topologică, potrivire bipartită, și multe altele.
+
+    În ziua de azi, majoritatea aplicațiilor ce țin de grafuri, lucrează cu grafuri ce se schimbă constant prin adăugarea sau ștergerea nodurilor sau muchiilor din acestea. Astfel, dorim să obținem o structură de date ce va avea timpi mai buni de rulare pentru actualizarea unei soluții după o modificare a muchiilor din graf, decât o parcurgere pe un graf static. Un algoritm se numește \textit{algoritm dinamic} (dynamic algorithm) dacă permite doar inserarea de muchii în graf. 
+
+    Cu toate că este un concept ce stă la baza teoriei grafurilor, foarte puțini algoritmi incrementali au fost proiectați pentru a menține un arbore DFS. Autorii articolului prezintă acesti algoritimi, analizând funcționalitatea și performanțele (atât teoretice, cât și practice) pe care acestea le obțin pe diferite grafuri. La final, aceștia vor propune un algoritm modificat, ce va încerca să obțină performanțe mai bune decât algoritmii existenți.
+
+
+\break
+
+\section*{ Algoritmi existenți }
+
+    \subsection*{ Algoritmi DFS Statici (SDFS și SDFS-Int) }
+    
+        \textbf{SDFS} este un algoritm ce presupune reluarea algoritmului DFS de la început, de fiecare dată când o muchie noua este adăugată.
+        
+        \textbf{SDFS-Int} este un algoritm derivat din SDFS ce se oprește atunci când toate nodurile din graf au fost vizitate. Acesta obtine performanțe mult mai bune decât SDFS pentru grafuri aleatoare.
+
+
+\hfill
+
+    \subsection*{DFS Incremental pentru Grafuri Orientate Aciclice (FDFS)}
+    
+    Algoritmul \textbf{FDFS} mentine numerotarea post-order (DFN) a nodurilor într-un arbore DFS. La inserarea unei muchii \textit{(x,y)} in graf, se verifica dacă muchia este de tipul \textit{anti-cross}, verificând dacă \textit{DFN[x] < DFN[y]}.
+    
+    În cazul în care muchia \textit{(x, y)} nu este de tipul \textit{anti-cross}, graful se actualizează și se termină procesul.
+    
+    În cazul în care muchia \textit{(x, y)} este de tipul \textit{anti-cross}, se va face un DFS parțial pentru nodurile în care se poate ajunge din \textit{y} în subgraful indus de nodurile avand DFN-ul cuprins între DFN[x] și DFN[y]. Astfel, se vor selecta nodurile aflate în subarborele din dreapta \textit{path(LCA(x, y), x)} sau din stânga \textit{path(LCA(x, y), y)}. FDFS elimină aceste vârfuri din subarborele corespunzător și calculează arborele DFS înrădăcinat nodului \textit{y} din T prin muchia \textit{(x, y)}. Pentru fiecare nod se va recalcula DNF-ul.
+
+
+\hfill
+    \subsection*{DFS Incremental pentru Grafuri Neorientate (ADFS)}
+    
+    Algoritmul \textbf{ADFS} menține o structură de date ce răspunde întrebărilor pentru LCA și nivelul strămoșilor. La inserarea în graf a unei muchii \textit{(x, y)}, algoritmul ADFS verifică dacă muchia este de tipul \textit{cross-edge} prin calcularea \textit{w = LCA(x, y)}, și asigurându-se că w nu este egal cu \textit{x} sau \textit{y}.
+
+    În cazul în care muchia \textit{(x, y)} este de tipul \textit{back-edge}, se actualizează graful și se termină procesul.
+    
+    În caz contrar, fie \textit{u} și \textit{v} copii ai lui \textit{w}, unde $x \in T(u)$ și $y \in T(v)$, iar \textit{x} va fi mai mic decât \textit{y} în \textit{T}. ADFS reconstruiește \textit{T(v)}, atașându-l la muchia \textit{(x, y)}. Acesta va inversa \textit{path(x, y)}, ce convertește muchii de tip \textit{back-edge} în muchii de tip \textit{cross-edge}. Ulterior va colecta toate muchiile de tip \textit{cross-edge} obținute, inserându-le ulterior in graf.
+
+    Singura diferență dintre ADFS1 și ADFS2 este în modul în care acești algoritmi procesează muchiile de tipul \textit{cross-edge} colectate.
+
+\hfill
+    \subsection*{DFS Incremental având worst-case garantat (WDFS)}
+    
+    Cu toate că există mai mulți algoritmi de menținere incrementală a DFS, cel mai rău caz de timp pentru actualizarea arborelui DFS după o inserare a unei muchii este tot \textit{O(m)}. Algoritmul \textbf{WDFS} vine însă cu un worst-case garantat de complexitate de timp \textit{$O(n \log^3 n)$}.
+
+    Algoritmul construiește o structură de date folosind arborele DFS curent, care este folosit pentru a reconstrui eficient arborele DFS după adăugarea unei muchii. Chiar dacă construirea unei astfel de structuri se realizează în \textit{O(m)}, ea trebuie actualizată periodic, odată la aproimativ \textit{O(m/n)} operații, acestă technică numindu-se \textit{reconstrucție periodică suprapusă} (overlapped periodic rebuilding).
+
+\break
+
+\section{ Experimente pe Grafuri Neorientate Aleatoare }
+
+    Experimentele fac referire la o comparație în ceea ce priveste rezultatele obținute de algoritmii de menținere incrementală a anui arbore DFS pe un graf neorientat aleatoriu.
+
+    În ceea ce privește experimentele, autorii au ales să compare rezultatele obținute pe baza numărului de muchii total procesate, și a numărului de muchii procesate la fiecare update. Astfel, în urma rezultatelor obținute, s-a remarcat faptul că performanțele algoritmilor SDFS, SDFS-Int și WDFS sunt foarte apropiate de limitele teoretice.
+
+    Surprinzător, performanțele algoritmilor ADFS1 și ADFS2 au fost diferite de cele așteptate. Atât ADFS1, cât și ADFS2 au performat mult mai rapid decât ceilalți algoritmi. Mai mult, algoritmii ADFS1 și ADFS2 au performat similar, în ciuda faptului că au complexități diferite ($O(n^{3/2} \sqrt{m})$ și $O(n^2/m)$). De notat este că algoritmii ADFS1 și ADFS2 au performat la fel de bine și mult mai rapid decât ceilalți algoritmi.
+
+    S-a mai observat că algoritmii ADFS procesează aproximativ 2 muchii per inserție după ce au fost inserate $O(n)$ muchii, iar când grafurile devin dense, numărul de muchii procesate de ADFS pentru actualizarea arborelui DFS ajunge asimptotic la 0.
+
+
+\hfill
+
+\section{ Structura unui arbore DFS}
+
+    Cum algoritmii SDFS, SDFS-Int și WDFS reconstruiesc arborele DFS de la început, odată cu adăugarea unei muchii noi, autorii au ales să se folosească de algoritmul ADFS, care reconstruiește arborele doar daca o muchie de tipul \textit{cross-edge} este adăugată. 
+
+    Fie \textit{T} un arbore DFS pentru un graf aleatoriu \textit{G(n, m)}. Fie $p_{\text{c}}$ probabilitatea ca urmatoarea muchie adăugată să fie de tipul cross-edge in \textit{T}.
+    În urma unui studiu experimental, s-a observat că valoarea lui $p_{\text{c}}$ scade atunci când graful devine mai dens. Asfel, ADFS se foloșeste de comportamentul pe care $p_{\text{c}}$ îl are într-un graf aleatoriu.
+
+    Din studiile făcute pe structura arborilor DFS pentru grafuri aleatoare, s-a observat o proprietate a structurilor, numită \textbf{broomstick structure}. 
+
+\subsection*{ Broomstick Structure}
+
+    Structura unui arbore DFS poate fii descrisă ca una a unei maturi în felul următor: plecând de la rădăcina arborelui, există o cale în jos unde nu se găsesc ramificații, iar fiecare nod are exact un copil. Ne referim la această cale drept "\textbf{coadă}" (stick). Toate celelalte noduri și muchii vor fi de acum "\textbf{perii}" măturii (bristles).
+
+    Fie $l_{\text{s}}$ lungimea \textit{cozii} în structura arborelui DFS. În urma unor teste, s-a observat că \textit{coada} apare după aproximativ $n \log n$ muchii (până atunci $l_{\text{s}}$ este 0). Dupa aceasta, lungimea cozii crește rapid la aproape 90\% din înălțimea ei după aproximativ $3n \log n$ muchii, urmând o creștere lentă, apropiindu-se de înălțimea maximă la aproximativ \textit{O($n ^ 2$)} muchii.
+
+
+\subsection*{ Lungimea cozii}
+
+    Pentru a analiza lungimea lui $l_{\text{s}}$ pentru $ m = \Omega(n \log n)$ muchii, se demonstreaza mai întâi o limită succintă a probabilității existenței unui drum fără ramificații în timpul unei traversări DFS în \textit{G(n, p)} prin teorema următoare.
+    
+    \textbf{Teoremă}: Pentru un graf aleatoriu \textit{G(n, p)}, cu $p =  (\log{n_{0}} + c) / n_{0}$, $n_{0} \leq n$ și $c \geq 1$, exisă o cale fără remificații având lungimea de cel puțin $n - n_{0}$ în arborele DFS al lui \textit{G}, cu probabilitatea de cel puțin $1 - 2e^{-c}$.
+
+    \break
+
+    Pentru a se stabili un \textit{tight-bound} a lunigimii cozii, trebuie selectată cea mai mică valoare pentru $n_0$ ce va satiface următoare condiție: Odată ce avem un drum DFS de lungime $n - n_0$ fără ramificări, subgraful indus de restul de $n_0$ vârfuri și ultimul vârf al acestei căi \textit{v} va rămâne conectat.
+
+    La sfârșit s-a demonstrat că pentru graful \textit{G(n, p)}, probabilitatea ca arborele DFS al său este o \textit{mătură} (broomstick) cu lungimea cozii $\geq n - n_0$, este $1 - 3e^{-c}$.
+
+\subsection*{ Proprietățile structurii de coadă de matură}
+
+    În urma analizei testelor obținute, autorii identifică 2 proprietăți pe care le are \textit{structura de mătura} asupra algoritmilor ADFS:
+    \begin{itemize}
+        \item ADFS va reconstrui arborele DFS doar în cazul în care o muchie de tipul \textit{cross-edge} a fost inserată.
+        \item ADFS va modifica doar \textit{perii} (bristles) arborelui DFS pentru a păstra coada intactă.
+    \end{itemize}
+    
+    
+\hfill
+
+\section{ Algoritmi noi pentru grafuri aleatoare }
+
+    \subsection*{Varianta simplă a SDFS (SDFS2) pentru grafuri neorientate aleatorii}
+
+    Văzând performanțele pe care ADFS le obține datorită proprietăților enunțate mai devreme, se propune o variantă pentru SDFS inpirată dintr-o contrucție bazată pe peri, ce va satisface proprietățile ADFS. Practic, se vor reconstrui doar perii arborelui DFS după inserarea unor muchii cross-edge. Acesta se va realiza prin marcarea nodurilor din perii măturii ca fiind nevizitați, și performând DFS de la radpcina perilor.
+
+    Ca rezultat, se va obține un algoritm SDFS2 care va procesa doar muchiile din peri. Astfel, timpul pentru a adauga a insera $m = 2n \log n$ muchii va fi $O(m^2) = O(n^2 \log^2 n)$.
+    
+    Autorii au observat că SDFS2 procesează $O(n^2)$ muchii similar cu ADFS. Acesta obține performanțe mult mai bune decât WDFS si SDFS-Int. Interesant este că în ciuda diferenței mare în numărul de muchii procesate de SDFS2 și ADFS, SDFS2 este mai rapid decât ADFS2 și este echivalent cu ADSF1 în practică. 
+
+    \subsection*{ Experimente pe grafuri orientate }
+
+    Algoritmul propus SFDS2 functionează si pentru grafuri orientate. Astfel, proprietățile structurii măturii și analiza SDFS2 pot fi demonstrate și pentru grafurile orientate folosind argumente similare.
+
+    În urma unor teste, s-a observat că SFDS2 obține rezultate similare cu FDSF (algoritm specific grafurilor orientate). Din nou, în ciuda diferenței uriașe de muchii procesate de SDFS2 față de FDSF, acesta rămâne echivalent lui FDSF.
+
+
+\hfill
+
+    \section{ DFS Incremental pe grafuri reale}
+
+    Majoritatea grafurilor care există în viața reală sunt diferite de cele generate aleatoriu pentru testarea algoritmilor. Cum pentru grafuri aleatoare, perii reprezentau intregul arbore DFS până la insearea a $\Theta(n \log n)$ muchii. Acest lucru forța SDFS2 sa reconstruiască întregul arbore, lucru ce dura $\Omega(n^2)$ timp chiar si pentru grafuri aleatoare, pe când ADFS și FDSF, care reconstruiau doar parțial arborele DFS, erau mult mai rapide. Astfel, atât ADFS și FDFS obțin performanțe mai bune decât SDFS2 sau alți algoritmi existenți.
+
+    \subsection*{ Algoritm pentru grafuri reale (SDFS3)}
+
+    Cum reconstruirea parțiala făcută de SFDS2 este semnificativă doar când \textit{mătura} are o dimensiune apreciabilă, lucru care nu se întamplă foarte des cu grafurile reale, autorii propun crearea unui nou algoritm ce reconstruiește doar partea afectatp de muchia adaugată in arborele DFS.
+
+    \subsubsection*{ Grafuri neorientate }
+
+    La adăugarea unei muchii de tipul cross-edge \textit{(x, y)}, ADFS reconstruiește unul din 2  subarbori candidați care se leagă de $LCA(x, y)$. Autorii propun algoritmul SDFS3 care va reconstrui doar subarborele care are cele mai puține noduri dintre cei doi subarbori. Nodurile acestuia vor fi marcate drept nevizitate, iar rezultatul DFS va fi legat muchiei \textit{(x, y)}.
+
+
+    \subsubsection*{ Grafuri orientate }
+
+    La adăugarea unei muchii de tipul anti-cross \textit{(x, y)}, FDSF reconstruieste vârfurile accesibile din \textit{y} în subgraful indus de un \textit{set candidat} de subarbori. Autorii propun ca SDFS3 să marcheze toți subarborii din acest set de candidați ca fiind nevizitați, urmând să continue din \textit{(x, y)} cu traversarea.
+
+    \subsubsection*{ Performanțe }
+
+    În urma testelor făcute pe noul algoritm, autorii observă că SFDS3 este mai rapid de peste 10 ori decât SDFS2, dar mai lent de peste 30 de ori decât ADFS.
+
+    Observații pentru \textit{grafuri neorientate}:
+    \begin{itemize}
+        \item ADFS depășește toți ceilalți algoritmi cu o marjă uriașă, ADFS1 fiind ușor mai bun decât ADFS2.
+        \item SDFS2 îmbunătățește ușor SDFS, în timp ce SDFS3 îmbunătățește semnificativ SDFS2.
+        \item WDFS are performanțe mai slabe decât SDFS pentru grafuri reale.
+    \end{itemize}
+
+    Observații pentru \textit{grafuri orientate}:
+    \begin{itemize}
+        \item FDFS și SDFS3 depășesc toți ceilalți algoritmi, cu excepția cazului în care densitatea este mare, unde SDFS este mai bun.
+        \item SDFS3 are performanțe mai bune decât FDFS în grafuri dense.
+        \item SDFS2 îmbunătățește ușor SDFS, iar SDFS3 îmbunătățește ușor SDFS2.
+    \end{itemize}
+
+\hfill
+
+    \section{ Concluzii }
+
+    În urma studiului produs de autori, aceștia au descoperit o proprietate importantă a arborilor DFS pentru un graf aleatoriu: \textit{structura de mătură} (broomstick structure). Aceștia au demonstrat teoretic variația în lungime a cozii arborelui DFS pe măsură ce densitatea graficului crește, lucru ce s-a potrivit cu rezultatele experimentale. Aceasta a dus la crearea unui nou algoritm extrem de simplu SDFS2. Acest algoritm se potrivește teoretic și depășește experimental algoritmul de ultimă generație în grafice aleatorii dense. În cele din urmă, pentru grafurile din lumea reală, au propus un nou algoritm SDFS3 care funcționează mult mai bine decât SDFS2. În ciuda faptului că este extrem de simplu, aproape întotdeauna se potrivește cu performanța FDFS în grafurile orientate. Cu toate acestea, pentru grafurile neorientate, s-a constatat că ADFS depășește toți algoritmii (inclusiv SDFS3) cu o marjă uriașă motivând utilizarea sa în practică.
+    
+    
+\end{document}
